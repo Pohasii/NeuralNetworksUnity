@@ -12,9 +12,18 @@ public class Perceptron
 
     private readonly Func<float, float> activationFunction;
 
+    public int Size { get; private set; }
+
+    public float this[int i]
+    {
+        get => weights[i];
+    }
+
     public Perceptron(int size, float learningRate, Func<float, float> activationFunction)
     {
         weights = new float[size];
+
+        Size = size;
 
         this.learningRate = learningRate;
         this.activationFunction = activationFunction;
@@ -25,7 +34,12 @@ public class Perceptron
         }
     }
 
-    public float Guess(float[] inputs)
+    public void SetWeights(float[] weights)
+    {
+        this.weights = weights;
+    }
+
+    public float Predict(float[] inputs)
     {
         var summ = 0f;
 
@@ -37,16 +51,14 @@ public class Perceptron
         return activationFunction(summ);
     }
 
-    public float Train(float[] inputs, int target)
+    public void Train(float[] inputs, float target)
     {
-        var guess = Guess(inputs);
+        var guess = Predict(inputs);
         var error = target - guess;
 
         for (int i = 0; i < weights.Length; i++)
         {
             weights[i] += error * inputs[i] * learningRate;
         }
-
-        return guess;
     }
 }

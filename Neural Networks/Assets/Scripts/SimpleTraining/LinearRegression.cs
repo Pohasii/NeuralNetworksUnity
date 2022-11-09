@@ -1,12 +1,14 @@
-﻿using Unity.Mathematics;
+﻿using System;
+using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-public class Main : MonoBehaviour
+public class LinearRegression : MonoBehaviour
 {
     public SpriteRenderer pointSpritePrefab;
 
     public LineRenderer line;
+    public LineRenderer predictionLine;
 
     public float learningRate;
 
@@ -17,16 +19,18 @@ public class Main : MonoBehaviour
 
     public Color[] pointColors;
 
+    public float a, b;
+
+    public Perceptron brain;
+
     private Point[] points;
     private SpriteRenderer[] pointViews = new SpriteRenderer[0];
 
-    public Perceptron perceptron;
-
     private void Awake()
     {
-        InitPoints();
+        brain = new Perceptron(3, learningRate, math.sign);
 
-        perceptron = new Perceptron(3, learningRate, math.sign);
+        InitPoints();
     }
 
     private void Update()
@@ -37,7 +41,7 @@ public class Main : MonoBehaviour
             ready = points[i].ready;
         }
 
-        if (ready)
+        if (ready && Input.GetKeyDown(KeyCode.Space))
         {
             InitPoints();
         }
@@ -51,11 +55,19 @@ public class Main : MonoBehaviour
                 var inputs = point.GetInputs();
                 var target = point.Target;
 
-                var guess = perceptron.Train(inputs, target);
+                brain.Train(inputs, target);
 
-                if (Mathf.Approximately(guess, target))
+                var prediction = brain.Predict(inputs);
+
+                DrawInitialLine();
+                DrawPredictionLine();
+                points[i].CalculateTarget(F);
+
+                var colorIndex = ((int)prediction + 1) / 2;
+                pointViews[i].color = pointColors[colorIndex];
+
+                if (Mathf.Approximately(prediction, target))
                 {
-                    pointViews[i].color = pointColors[2];
                     points[i].ready = true;
                 }
             }
@@ -69,16 +81,13 @@ public class Main : MonoBehaviour
             Destroy(point.gameObject);
         }
 
-        line.SetPosition(0, new Vector2(bounds.x, bounds.y));
-        line.SetPosition(1, new Vector2(-bounds.x, -bounds.y));
-
         points = new Point[pointsCount];
         pointViews = new SpriteRenderer[pointsCount];
 
         for (int i = 0; i < pointsCount; i++)
         {
             points[i].RandomizePosition(bounds);
-            points[i].CalculateTarget(bounds);
+            points[i].CalculateTarget(F);
             var pointView = Instantiate(pointSpritePrefab);
             pointViews[i] = pointView;
 
@@ -88,6 +97,41 @@ public class Main : MonoBehaviour
 
             pointView.transform.position = new Vector3(pointPos.x, pointPos.y, 0);
         }
+    }
+
+    private void DrawInitialLine()
+    {
+        var x1 = -bounds.x;
+        var y1 = F(x1);
+
+        var x2 = bounds.x;
+        var y2 = F(x2);
+
+        line.SetPosition(0, new Vector2(x1, y1));
+        line.SetPosition(1, new Vector2(x2, y2));
+    }
+
+    private void DrawPredictionLine()
+    {
+        var p1 = new Vector2(-bounds.x, GuessY(-bounds.x));
+        var p2 = new Vector2(bounds.x, GuessY(bounds.x));
+
+        predictionLine.SetPosition(0, p1);
+        predictionLine.SetPosition(1, p2);
+    }
+
+    private float GuessY(float x)
+    {
+        var w0 = brain[0];
+        var w1 = brain[1];
+        var w2 = brain[2];
+
+        return -(w2 / w1) - (w0 / w1) * x;
+    }
+
+    public float F(float x)
+    {
+        return a * x + b;
     }
 }
 
@@ -117,11 +161,11 @@ public struct Point
         Position = position;
     }
 
-    public void CalculateTarget(Vector2 bounds)
+    public void CalculateTarget(Func<float, float> func)
     {
-        var result = PointTest(new Vector2(Position.x, Position.y), bounds);
+        var result = func(Position.x);
 
-        if (result > 1)
+        if (Position.y > result)
         {
             Target = 1;
         }
@@ -129,12 +173,5 @@ public struct Point
         {
             Target = -1;
         }
-    }
-
-    public static float PointTest(Vector2 point, Vector2 bounds)
-    {
-        var D = (point.x - bounds.x) * (-bounds.y - bounds.y) - (point.y - bounds.y) * (-bounds.x - bounds.x);
-
-        return D;
     }
 }
