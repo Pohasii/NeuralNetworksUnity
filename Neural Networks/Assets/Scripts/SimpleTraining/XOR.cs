@@ -8,7 +8,7 @@ public struct TrainingData
     public float[] target;
 }
 
-public class NeuralNetworkMono : MonoBehaviour
+public class XOR : MonoBehaviour
 {
     public int iterationCount;
 
