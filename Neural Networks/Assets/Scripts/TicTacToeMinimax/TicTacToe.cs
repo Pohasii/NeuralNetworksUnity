@@ -9,9 +9,11 @@ public class TicTacToe
     private char player1;
     private char player2;
 
-    private bool gameOver;
-
     private char[] board;
+
+    public char[] Board => board;
+
+    public bool GameOver { get; private set; }
 
     public int Size { get; private set; }
 
@@ -50,9 +52,19 @@ public class TicTacToe
         }
     }
 
+    public void ResetGame()
+    {
+        GameOver = false;
+
+        for (int i = 0; i < board.Length; i++)
+        {
+            board[i] = Empty;
+        }
+    }
+
     public void Move(int index)
     {
-        if (gameOver) return;
+        if (GameOver) return;
 
         board[index] = CurrentPlayer;
 
@@ -62,8 +74,8 @@ public class TicTacToe
 
         if (winner != Empty)
         {
-            gameOver = true;
-            OnWin.Invoke(winner);
+            GameOver = true;
+            OnWin?.Invoke(winner);
         }
 
         OnMove?.Invoke(index, board[index]);
@@ -86,7 +98,7 @@ public class TicTacToe
         }
     }
 
-    public void BestMove()
+    public int CalculateBestMove()
     {
         var bestScore = int.MinValue;
 
@@ -109,6 +121,13 @@ public class TicTacToe
                 }
             }
         }
+
+        return bestMove;
+    }
+
+    public void DoBestMove()
+    {
+        var bestMove = CalculateBestMove();
 
         Move(bestMove);
     }
@@ -171,6 +190,52 @@ public class TicTacToe
         return CurrentPlayer == player1 ? player2 : player1;
     }
 
+    public float GetPlayerNormolized(char player)
+    {
+        var currentPlayer = 0f;
+
+        if (player == 'X')
+        {
+            currentPlayer = 0.5f;
+        }
+        else if (player == 'O')
+        {
+            currentPlayer = 1f;
+        }
+
+        return currentPlayer;
+    }
+
+    public float[] GetBoardStateAsNormolizedFloatArray()
+    {
+        float[] boardState = new float[board.Length];
+
+        for (int i = 0; i < board.Length; i++)
+        {
+            var slotState = board[i] == Empty
+                ? 0f
+                : GetPlayerNormolized(board[i]);
+
+            boardState[i] = slotState;
+        }
+
+        return boardState;
+    }
+
+    public float[] GetBoardStateAsNormolizedFloatArray2()
+    {
+        float[] boardState = new float[board.Length * 3];
+
+        for (int i = 0; i < board.Length; i++)
+        {
+            boardState[i] = board[i] == 'X' ? 1 : 0;
+            boardState[i + board.Length] = board[i] == 'O' ? 1 : 0;
+            boardState[i + board.Length * 2] = board[i] == Empty ? 1 : 0;
+        }
+
+        return boardState;
+    }
+
     private char CheckWinner()
     {
         var winner = Empty;
@@ -221,7 +286,7 @@ public class TicTacToe
         return (a != Empty) && (a == b) && (b == c);
     }
 
-    public int ToIndex(int row, int indexInRow)
+    private int ToIndex(int row, int indexInRow)
     {
         return Array2DUtils.ToIndex(row, indexInRow, Size);
     }

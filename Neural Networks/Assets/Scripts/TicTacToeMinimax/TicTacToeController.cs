@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 
 [System.Serializable]
 public struct PlayerData
@@ -13,7 +12,11 @@ public struct PlayerData
 [RequireComponent(typeof(TicTacToeView))]
 public class TicTacToeController : MonoBehaviour
 {
+    public TicTacToeNeuralNetwork ticTacToeAI;
+
     public PlayerData[] players;
+
+    private bool draw = true;
 
     private TicTacToeView view;
 
@@ -21,20 +24,7 @@ public class TicTacToeController : MonoBehaviour
 
     private void Awake()
     {
-        view = GetComponent<TicTacToeView>();
-
-        ticTacToe = new TicTacToe(players[0].player, players[1].player);
-
-        view.Init(3);
-
-        ticTacToe.OnMove += TicTacToe_OnMove;
-        ticTacToe.OnWin += TicTacToe_OnWin;
-        Slot.OnClick += Slot_OnClick;
-
-        if (players[0].isBot)
-        {
-            ticTacToe.Move(4);
-        }
+        InitTicTacToe();
     }
 
     private void OnDestroy()
@@ -46,14 +36,70 @@ public class TicTacToeController : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            ticTacToeAI.SimpleTrain();
+
+            var bestMove = ticTacToe.CalculateBestMove();
+            var aiMove = ticTacToeAI.Guess2();
+            Debug.Log($"Best move: {bestMove}  AIMove: {aiMove}");
+        }
+
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            ResetGame();
+            draw = false;
+
+            ticTacToeAI.Train();
+
+            draw = true;
+            ResetGame();
+
+            Debug.Log("Ready");
+        }
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            var bestMove = ticTacToe.CalculateBestMove();
+            var aiMove = ticTacToeAI.Guess2();
+            Debug.Log($"Best move: {bestMove}  AIMove: {aiMove}");
+        }
+
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            ticTacToe.BestMove();
+            ticTacToe.DoBestMove();
         }
 
         if (Input.GetKeyDown(KeyCode.R))
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            ResetGame();
+            //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+    }
+
+    public void ResetGame()
+    {
+        ticTacToe.ResetGame();
+        view.ResetGame();
+    }
+
+    private void InitTicTacToe()
+    {
+        view = GetComponent<TicTacToeView>();
+
+        ticTacToe = new TicTacToe(players[0].player, players[1].player);
+
+        ticTacToeAI.Init(ticTacToe);
+
+        view.Init(3);
+
+        ticTacToe.OnMove += TicTacToe_OnMove;
+        ticTacToe.OnWin += TicTacToe_OnWin;
+        Slot.OnClick += Slot_OnClick;
+
+        if (players[0].isBot)
+        {
+            ticTacToe.Move(4);
         }
     }
 
@@ -83,16 +129,20 @@ public class TicTacToeController : MonoBehaviour
 
     private void TicTacToe_OnMove(int cell, char playerOnThisTurn)
     {
+        if (!draw) return;
+
         view.Move(cell, playerOnThisTurn);
 
         if (IsPlayerBot(ticTacToe.CurrentPlayer))
         {
-            ticTacToe.BestMove();
+            ticTacToe.DoBestMove();
         }
     }
 
     private void TicTacToe_OnWin(char winner)
     {
+        if (!draw) return;
+
         view.ShowWinner(winner);
     }
 }

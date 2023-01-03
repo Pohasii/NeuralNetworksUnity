@@ -22,11 +22,15 @@ public class TicTacToeView : MonoBehaviour
 
     private Transform[] board;
 
+    private List<GameObject> figures;
+
     public void Init(int size)
     {
         var newSpacing = slotPrefab.transform.localScale.x + spacing;
 
         board = new Transform[size * size];
+
+        figures = new List<GameObject>(size * size);
 
         var boardParent = new GameObject("Board").transform;
 
@@ -47,13 +51,26 @@ public class TicTacToeView : MonoBehaviour
 
     }
 
+    public void ResetGame()
+    {
+        for (int i = 0; i < figures.Count; i++)
+        {
+            Destroy(figures[i]);
+        }
+
+        winnerText.text = "";
+
+        figures.Clear();
+    }
+
     public void Move(int cell, int player)
     {
         var position = board[cell].position;
 
         var prefab = players.Where(x => x.player == player).FirstOrDefault().prefab;
 
-        Instantiate(prefab, position, Quaternion.identity);
+        var figure = Instantiate(prefab, position, Quaternion.identity).gameObject;
+        figures.Add(figure);
     }
 
     public void ShowWinner(char winner)
